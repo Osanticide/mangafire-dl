@@ -138,51 +138,56 @@ def main() -> int:
             progress_callback=show_progress,
         )
 
-    except InvalidSelectionError as exc:
+    except InvalidSelectionError:
         print(
-            f"Selection error: {exc}",
+            f"Selection error: Invalid selection: {selection_text}",
             file=sys.stderr,
         )
         return 1
 
-    except InvalidMangaFireURLError as exc:
+    except InvalidMangaFireURLError:
         print(
-            f"URL error: {exc}",
+            "URL error: The provided URL is not a valid MangaFire URL.",
             file=sys.stderr,
         )
         return 1
 
-    except NoResourcesFoundError as exc:
+    except NoResourcesFoundError:
         print(
-            f"Error: {exc}",
+            "Error: No resources were found for the requested selection.",
             file=sys.stderr,
         )
         return 1
 
     except GalleryDLNotFoundError as exc:
         print(
-            f"Error: {exc}",
+            "Error: Could not find the gallery-dl executable "
+            f"'{exc.executable}'. Make sure gallery-dl is installed "
+            "and available in PATH.",
             file=sys.stderr,
         )
         return 1
 
     except GalleryDLDownloadError as exc:
         print(
-            f"Download error: {exc}",
+            "Download error: "
+            f"gallery-dl exited with code {exc.returncode} "
+            f"for URL: {exc.url}",
             file=sys.stderr,
         )
         return 1
 
-    except requests.RequestException as exc:
+    except requests.RequestException:
         print(
-            f"MangaFire communication error: {exc}",
+            "MangaFire communication error: "
+            "The request to MangaFire could not be completed.",
             file=sys.stderr,
         )
         return 1
 
-    except Exception as exc:
+    except Exception:
         print(
-            f"Unexpected error: {exc}",
+            "Unexpected error: An unexpected error occurred.",
             file=sys.stderr,
         )
         return 1

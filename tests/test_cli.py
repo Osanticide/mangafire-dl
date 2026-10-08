@@ -34,11 +34,11 @@ def test_help(capsys):
 
     captured = capsys.readouterr()
 
-    assert "Baixa volumes e capítulos do MangaFire" in captured.out
+    assert "Download manga volumes and chapters from MangaFire" in captured.out
     assert "--version" in captured.out
     assert "--volumes" in captured.out
     assert "--chapters" in captured.out
-    assert "Exemplos:" in captured.out
+    assert "Examples:" in captured.out
 
 
 def test_main_downloads_successfully(monkeypatch):
@@ -89,7 +89,8 @@ def test_main_handles_invalid_selection(monkeypatch, capsys):
 
     captured = capsys.readouterr()
 
-    assert "Erro de seleção:" in captured.err
+    assert "Selection error:" in captured.err
+    assert "Invalid selection: 10-1" in captured.err
 
 
 def test_main_handles_invalid_url(monkeypatch, capsys):
@@ -124,7 +125,8 @@ def test_main_handles_invalid_url(monkeypatch, capsys):
 
     captured = capsys.readouterr()
 
-    assert "Erro de URL:" in captured.err
+    assert "URL error:" in captured.err
+    assert "The provided URL is not a valid MangaFire URL." in captured.err
 
 
 def test_main_handles_no_resources(monkeypatch, capsys):
@@ -161,7 +163,8 @@ def test_main_handles_no_resources(monkeypatch, capsys):
 
     captured = capsys.readouterr()
 
-    assert "Nenhum recurso foi encontrado" in captured.err
+    assert "Error:" in captured.err
+    assert "No resources were found for the requested selection." in captured.err
 
 
 def test_main_handles_gallery_dl_not_found(monkeypatch, capsys):
@@ -233,8 +236,8 @@ def test_main_handles_gallery_dl_download_error(monkeypatch, capsys):
 
     captured = capsys.readouterr()
 
-    assert "Erro durante o download:" in captured.err
-    assert "código de saída 1" in captured.err
+    assert "Download error:" in captured.err
+    assert "gallery-dl exited with code 1" in captured.err
 
 
 def test_main_handles_unexpected_error(monkeypatch, capsys):
@@ -267,4 +270,5 @@ def test_main_handles_unexpected_error(monkeypatch, capsys):
 
     captured = capsys.readouterr()
 
-    assert "Erro inesperado: erro inesperado" in captured.err
+    assert "Unexpected error:" in captured.err
+    assert "An unexpected error occurred." in captured.err
