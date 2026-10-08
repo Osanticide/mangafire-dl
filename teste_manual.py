@@ -1,25 +1,20 @@
-from mangafire.requests import DownloadRequest
+from mangafire.requests import (
+    InvalidSelectionError,
+    DownloadRequest,
+    parse_selections,
+)
 from mangafire.resolver import MangaFireResolver
 from mangafire.urls import build_chapter_url, build_volume_url
 
 
-def read_range() -> tuple[float, float]:
+def read_selection() -> tuple[tuple[float, float], ...]:
     while True:
-        value = input("Intervalo (ex.: 1-10): ").strip()
+        value = input("Seleção (ex.: 1, 3-7, 12, 636.5): ").strip()
 
         try:
-            start, end = value.split("-", 1)
-            start = float(start.strip())
-            end = float(end.strip())
-
-            if start > end:
-                print("O início não pode ser maior que o fim.")
-                continue
-
-            return start, end
-
-        except ValueError:
-            print("Intervalo inválido. Use o formato: 1-10")
+            return parse_selections(value)
+        except InvalidSelectionError as exc:
+            print(f"Seleção inválida: {exc}")
 
 
 def main() -> None:
@@ -44,14 +39,13 @@ def main() -> None:
 
         print("Digite 'v' para volumes ou 'c' para capítulos.")
 
-    start, end = read_range()
+    selections = read_selection()
 
     request = DownloadRequest(
         manga_url=manga_url,
         language=language,
         mode=mode,
-        start=start,
-        end=end,
+        selections=selections,
     )
 
     print("\nResolvendo...\n")
@@ -68,7 +62,10 @@ def main() -> None:
 
     for resource in resources:
         if mode == "volumes":
-            url = build_volume_url(manga_url, resource)
+            url = build_volume_url(
+                manga_url,
+                resource,
+            )
 
             print(
                 f"Volume {resource.number} | "
@@ -77,7 +74,10 @@ def main() -> None:
             )
 
         else:
-            url = build_chapter_url(manga_url, resource)
+            url = build_chapter_url(
+                manga_url,
+                resource,
+            )
 
             print(
                 f"Capítulo {resource.number} | "

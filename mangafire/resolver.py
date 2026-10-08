@@ -3,7 +3,7 @@ from __future__ import annotations
 from .api import MangaFireAPI
 from .models import Chapter, Volume
 from .parser import parse_manga_id
-from .requests import DownloadRequest
+from .requests import DownloadRequest, Selection
 
 
 class InvalidVolumeRangeError(ValueError):
@@ -20,6 +20,15 @@ class MangaFireResolver:
     def __init__(self, api: MangaFireAPI | None = None) -> None:
         self.api = api or MangaFireAPI()
 
+    @staticmethod
+    def _matches_selection(
+        number: float,
+        selections: tuple[Selection, ...],
+    ) -> bool:
+        """Verifica se um número pertence a alguma das seleções."""
+
+        return any(start <= number <= end for start, end in selections)
+
     def resolve_request(
         self,
         request: DownloadRequest,
@@ -32,16 +41,14 @@ class MangaFireResolver:
             return self.resolve_volumes(
                 manga_id=manga_id,
                 language=request.language,
-                start=request.start,
-                end=request.end,
+                selections=request.selections,
             )
 
         if request.mode == "chapters":
             return self.resolve_chapters(
                 manga_id=manga_id,
                 language=request.language,
-                start=request.start,
-                end=request.end,
+                selections=request.selections,
             )
 
         raise ValueError(f"Modo de download inválido: {request.mode}")
@@ -50,22 +57,25 @@ class MangaFireResolver:
         self,
         manga_id: str,
         language: str,
-        start: float,
-        end: float,
+        selections: tuple[Selection, ...],
     ) -> list[Volume]:
-        """Resolve os volumes de um mangá dentro de um intervalo e idioma."""
+        """Resolve volumes conforme as seleções e o idioma."""
 
-        if start > end:
-            raise InvalidVolumeRangeError(
-                "O volume inicial não pode ser maior que o volume final."
-            )
+        if not selections:
+            raise InvalidVolumeRangeError("Nenhuma seleção de volumes foi informada.")
 
         volumes = self.api.get_volumes(manga_id)
 
         matching_volumes = [
             volume
             for volume in volumes
-            if volume.language == language and start <= volume.number <= end
+            if (
+                volume.language == language
+                and self._matches_selection(
+                    volume.number,
+                    selections,
+                )
+            )
         ]
 
         return sorted(
@@ -77,14 +87,13 @@ class MangaFireResolver:
         self,
         manga_id: str,
         language: str,
-        start: float,
-        end: float,
+        selections: tuple[Selection, ...],
     ) -> list[Chapter]:
-        """Resolve os capítulos de um mangá dentro de um intervalo e idioma."""
+        """Resolve capítulos conforme as seleções e o idioma."""
 
-        if start > end:
+        if not selections:
             raise InvalidChapterRangeError(
-                "O capítulo inicial não pode ser maior que o capítulo final."
+                "Nenhuma seleção de capítulos foi informada."
             )
 
         chapters = self.api.get_chapters(
@@ -93,7 +102,12 @@ class MangaFireResolver:
         )
 
         matching_chapters = [
-            chapter for chapter in chapters if start <= chapter.number <= end
+            chapter
+            for chapter in chapters
+            if self._matches_selection(
+                chapter.number,
+                selections,
+            )
         ]
 
         chapters_by_number: dict[float, list[Chapter]] = {}
