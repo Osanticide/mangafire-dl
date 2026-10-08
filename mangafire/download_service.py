@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 from .downloader import GalleryDLDownloader
 from .models import Chapter, Volume
+from .output import (
+    build_output_path,
+    resolve_output_directory,
+)
 from .requests import DownloadRequest
 from .resolver import MangaFireResolver
 from .urls import build_chapter_url, build_volume_url
@@ -58,6 +63,7 @@ class MangaFireDownloadService:
         self,
         request: DownloadRequest,
         progress_callback: ProgressCallback | None = None,
+        output_directory: str | Path | None = None,
     ) -> None:
         """Resolve e baixa todos os recursos da solicitação em sequência."""
 
@@ -70,10 +76,23 @@ class MangaFireDownloadService:
                 selections=request.selections,
             )
 
+        output_root = resolve_output_directory(
+            output_directory,
+        )
+
         total = len(resources)
 
         for index, resource in enumerate(resources, start=1):
-            url = self._build_url(request.manga_url, resource)
+            url = self._build_url(
+                request.manga_url,
+                resource,
+            )
+
+            destination = build_output_path(
+                output_directory=output_root,
+                manga_url=request.manga_url,
+                resource=resource,
+            )
 
             if progress_callback is not None:
                 progress_callback(
@@ -86,7 +105,10 @@ class MangaFireDownloadService:
                     )
                 )
 
-            self.downloader.download(url)
+            self.downloader.download(
+                url,
+                destination,
+            )
 
             if progress_callback is not None:
                 progress_callback(
@@ -107,9 +129,15 @@ class MangaFireDownloadService:
         """Constrói a URL correspondente ao recurso."""
 
         if isinstance(resource, Volume):
-            return build_volume_url(manga_url, resource)
+            return build_volume_url(
+                manga_url,
+                resource,
+            )
 
         if isinstance(resource, Chapter):
-            return build_chapter_url(manga_url, resource)
+            return build_chapter_url(
+                manga_url,
+                resource,
+            )
 
         raise TypeError(f"Tipo de recurso não suportado: {type(resource).__name__}")

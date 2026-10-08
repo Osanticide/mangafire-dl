@@ -58,7 +58,7 @@ class FakeChapterResolver:
         ]
 
 
-def test_downloads_resources_sequentially():
+def test_downloads_resources_sequentially(tmp_path):
     resolver = FakeResolver()
     downloader = Mock()
 
@@ -74,7 +74,10 @@ def test_downloads_resources_sequentially():
         selections=((1, 3),),
     )
 
-    service.download(request)
+    service.download(
+        request,
+        output_directory=tmp_path,
+    )
 
     assert downloader.download.call_count == 3
 
@@ -82,6 +85,12 @@ def test_downloads_resources_sequentially():
         "https://mangafire.to/title/027-bleach/volume/101",
         "https://mangafire.to/title/027-bleach/volume/102",
         "https://mangafire.to/title/027-bleach/volume/103",
+    ]
+
+    assert [call.args[1] for call in downloader.download.call_args_list] == [
+        tmp_path / "Bleach/volumes/Bleach - Volume 01.cbz",
+        tmp_path / "Bleach/volumes/Bleach - Volume 02.cbz",
+        tmp_path / "Bleach/volumes/Bleach - Volume 03.cbz",
     ]
 
 

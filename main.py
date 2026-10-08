@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 import requests
 
@@ -11,6 +12,7 @@ from mangafire.download_service import (
     NoResourcesFoundError,
 )
 from mangafire.downloader import (
+    GalleryDLArchiveNotFoundError,
     GalleryDLDownloadError,
     GalleryDLNotFoundError,
 )
@@ -39,7 +41,9 @@ def build_parser() -> argparse.ArgumentParser:
             "  mangafire-dl URL --lang pt-br --volumes 1-5\n"
             "  mangafire-dl URL --lang pt-br --volumes 1, 6, 12\n"
             "  mangafire-dl URL --lang en --chapters 1-20\n"
-            "  mangafire-dl URL --lang en --chapters 1-5, 10, 12-15"
+            "  mangafire-dl URL --lang en --chapters 1-5, 10, 12-15\n"
+            "  mangafire-dl URL --lang pt-br --volumes 1-5 "
+            '--output "D:\\Mangas"'
         ),
     )
 
@@ -59,6 +63,15 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         metavar="LANGUAGE",
         help="Language of the volumes or chapters. E.g.: pt-br, en, es.",
+    )
+
+    parser.add_argument(
+        "--output",
+        type=Path,
+        metavar="PATH",
+        help=(
+            "Output directory. Defaults to the operating system Downloads directory."
+        ),
     )
 
     mode_group = parser.add_mutually_exclusive_group(required=True)
@@ -122,7 +135,9 @@ def main() -> int:
     selection_text = args.volumes if args.volumes is not None else args.chapters
 
     try:
-        selections = parse_selections(selection_text)
+        selections = parse_selections(
+            selection_text,
+        )
 
         request = DownloadRequest(
             manga_url=args.url,
@@ -136,6 +151,7 @@ def main() -> int:
         service.download(
             request,
             progress_callback=show_progress,
+            output_directory=args.output,
         )
 
     except InvalidSelectionError:
@@ -164,6 +180,14 @@ def main() -> int:
             "Error: Could not find the gallery-dl executable "
             f"'{exc.executable}'. Make sure gallery-dl is installed "
             "and available in PATH.",
+            file=sys.stderr,
+        )
+        return 1
+
+    except GalleryDLArchiveNotFoundError:
+        print(
+            "Download error: gallery-dl completed successfully, "
+            "but no CBZ archive was produced.",
             file=sys.stderr,
         )
         return 1

@@ -1,0 +1,12 @@
+{
+    "extractor": {
+        "base-directory": "C:/Temp/mangafire-test-3",
+        "mangafire": {
+            "directory": [
+                "{manga}",
+                "volumes"
+            ],
+            "filename": "Bleach - Volume {volume}"
+        }
+    }
+}

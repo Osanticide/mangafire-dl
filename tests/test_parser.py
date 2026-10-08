@@ -3,6 +3,7 @@ import pytest
 from mangafire.parser import (
     InvalidMangaFireURLError,
     parse_manga_id,
+    parse_manga_title,
 )
 
 
@@ -41,3 +42,15 @@ def test_parse_manga_id_rejects_wrong_path():
 def test_parse_manga_id_rejects_invalid_scheme():
     with pytest.raises(InvalidMangaFireURLError):
         parse_manga_id("ftp://mangafire.to/title/027")
+
+
+def test_parse_manga_title_from_slug_url():
+    assert parse_manga_title("https://mangafire.to/title/027-bleach") == "Bleach"
+
+
+def test_parse_manga_title_from_multiword_slug():
+    assert parse_manga_title("https://mangafire.to/title/abc-blue-box") == "Blue Box"
+
+
+def test_parse_manga_title_without_slug():
+    assert parse_manga_title("https://mangafire.to/title/027") == "027"
