@@ -92,18 +92,12 @@ class MangaFireAPI:
 
             data = self._get(endpoint, page_params)
 
-            print(
-                f"DEBUG: page={page} "
-                f"items={len(data.get('items', []))} "
-                f"meta={data.get('meta')}"
-            )
-
             items = data.get("items", [])
             all_items.extend(items)
 
             meta = data.get("meta", {})
 
-            if not data.get("hasNext", False):
+            if not meta.get("hasNext", False):
                 break
 
             page += 1
