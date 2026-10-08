@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from .api import MangaFireAPI
 from .models import Chapter, Volume
+from .parser import parse_manga_id
+from .requests import DownloadRequest
 
 
 class InvalidVolumeRangeError(ValueError):
