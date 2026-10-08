@@ -1,5 +1,6 @@
-from mangafire.models import Volume
+from mangafire.models import Chapter, Volume
 from mangafire.resolver import (
+    InvalidChapterRangeError,
     InvalidVolumeRangeError,
     MangaFireResolver,
 )
@@ -35,6 +36,65 @@ class FakeMangaFireAPI:
                 name="Volume 1",
                 language="en",
                 chapter_count=10,
+            ),
+        ]
+
+
+class FakeChapterAPI:
+    def get_chapters(
+        self,
+        manga_id: str,
+        language: str | None = None,
+    ) -> list[Chapter]:
+        return [
+            Chapter(
+                id=1,
+                number=1,
+                name="Chapter 1",
+                language="en",
+                type="official",
+            ),
+            Chapter(
+                id=2,
+                number=1,
+                name="Chapter 1",
+                language="en",
+                type="unofficial",
+            ),
+            Chapter(
+                id=3,
+                number=2,
+                name="Chapter 2",
+                language="en",
+                type="official",
+            ),
+            Chapter(
+                id=4,
+                number=2,
+                name="Chapter 2",
+                language="en",
+                type="unofficial",
+            ),
+            Chapter(
+                id=5,
+                number=3,
+                name="Chapter 3",
+                language="en",
+                type="unofficial",
+            ),
+            Chapter(
+                id=6,
+                number=4,
+                name="Chapter 4",
+                language="en",
+                type="official",
+            ),
+            Chapter(
+                id=7,
+                number=4,
+                name="Chapter 4",
+                language="en",
+                type="unofficial",
             ),
         ]
 
@@ -107,3 +167,85 @@ def test_invalid_volume_range():
         pass
     else:
         raise AssertionError("Era esperado InvalidVolumeRangeError.")
+
+
+def test_resolve_chapters_prefers_official_on_first_ambiguity():
+    resolver = MangaFireResolver(FakeChapterAPI())
+
+    chapters = resolver.resolve_chapters(
+        manga_id="027",
+        language="en",
+        start=1,
+        end=1,
+    )
+
+    assert len(chapters) == 1
+    assert chapters[0].type == "official"
+
+
+def test_resolve_chapters_keeps_previous_choice():
+    resolver = MangaFireResolver(FakeChapterAPI())
+
+    chapters = resolver.resolve_chapters(
+        manga_id="027",
+        language="en",
+        start=1,
+        end=2,
+    )
+
+    assert [chapter.type for chapter in chapters] == [
+        "official",
+        "official",
+    ]
+
+
+def test_resolve_chapters_single_version_changes_preference():
+    resolver = MangaFireResolver(FakeChapterAPI())
+
+    chapters = resolver.resolve_chapters(
+        manga_id="027",
+        language="en",
+        start=1,
+        end=4,
+    )
+
+    assert [chapter.type for chapter in chapters] == [
+        "official",
+        "official",
+        "unofficial",
+        "unofficial",
+    ]
+
+
+def test_resolve_chapters_returns_one_chapter_per_number():
+    resolver = MangaFireResolver(FakeChapterAPI())
+
+    chapters = resolver.resolve_chapters(
+        manga_id="027",
+        language="en",
+        start=1,
+        end=4,
+    )
+
+    assert [chapter.number for chapter in chapters] == [
+        1,
+        2,
+        3,
+        4,
+    ]
+
+
+def test_invalid_chapter_range():
+    resolver = MangaFireResolver(FakeChapterAPI())
+
+    try:
+        resolver.resolve_chapters(
+            manga_id="027",
+            language="en",
+            start=3,
+            end=1,
+        )
+    except InvalidChapterRangeError:
+        pass
+    else:
+        raise AssertionError("Era esperado InvalidChapterRangeError.")
