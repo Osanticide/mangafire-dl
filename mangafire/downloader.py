@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tempfile
@@ -38,6 +39,23 @@ class GalleryDLArchiveNotFoundError(RuntimeError):
         super().__init__(
             "gallery-dl completed successfully, but no CBZ archive "
             f"was produced for URL: {url}"
+        )
+
+
+class GalleryDLArchiveNameError(RuntimeError):
+    """Indica que o nome do CBZ não pôde ser interpretado."""
+
+    def __init__(
+        self,
+        archive_name: str,
+        resource_type: str,
+    ) -> None:
+        self.archive_name = archive_name
+        self.resource_type = resource_type
+
+        super().__init__(
+            f"Could not determine the {resource_type} number "
+            f"from gallery-dl archive name: {archive_name}"
         )
 
 
@@ -109,3 +127,94 @@ class GalleryDLDownloader:
             )
 
         return destination
+
+    def download_to_directory(
+        self,
+        url: str,
+        destination_directory: str | Path,
+    ) -> Path:
+        """Baixa uma URL e preserva o nome original do CBZ produzido."""
+
+        destination_directory = Path(destination_directory)
+        destination_directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        with tempfile.TemporaryDirectory(
+            prefix="mangafire-dl-",
+        ) as temporary_directory:
+            try:
+                result = subprocess.run(
+                    [
+                        self.executable,
+                        "--config-ignore",
+                        "--cbz",
+                        "-d",
+                        temporary_directory,
+                        url,
+                    ],
+                    check=False,
+                )
+            except FileNotFoundError as exc:
+                raise GalleryDLNotFoundError(
+                    executable=self.executable,
+                ) from exc
+
+            if result.returncode != 0:
+                raise GalleryDLDownloadError(
+                    url=url,
+                    returncode=result.returncode,
+                )
+
+            archives = sorted(
+                Path(temporary_directory).rglob("*.cbz"),
+            )
+
+            if not archives:
+                raise GalleryDLArchiveNotFoundError(
+                    url=url,
+                )
+
+            if len(archives) > 1:
+                raise GalleryDLArchiveNotFoundError(
+                    url=url,
+                )
+
+            archive = archives[0]
+            destination = destination_directory / archive.name
+
+            shutil.move(
+                str(archive),
+                str(destination),
+            )
+
+        return destination
+
+    @staticmethod
+    def parse_archive_number(
+        archive_name: str,
+        resource_type: str,
+    ) -> float:
+        """Extrai o número do recurso do nome produzido pelo gallery-dl."""
+
+        if resource_type == "volume":
+            pattern = r"^v(?P<number>\d+(?:\.\d+)?)\.cbz$"
+        elif resource_type == "chapter":
+            pattern = r"^c(?P<number>\d+(?:\.\d+)?)(?:_.*)?\.cbz$"
+        else:
+            raise ValueError(f"Unsupported resource type: {resource_type}")
+
+        match = re.match(
+            pattern,
+            archive_name,
+            re.IGNORECASE,
+        )
+
+        if match is None:
+            raise GalleryDLArchiveNameError(
+                archive_name=archive_name,
+                resource_type=resource_type,
+            )
+
+        return float(match.group("number"))

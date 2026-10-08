@@ -12,12 +12,16 @@ from mangafire.download_service import (
     NoResourcesFoundError,
 )
 from mangafire.downloader import (
+    GalleryDLArchiveNameError,
     GalleryDLArchiveNotFoundError,
     GalleryDLDownloadError,
     GalleryDLNotFoundError,
 )
 from mangafire.models import Chapter, Volume
-from mangafire.parser import InvalidMangaFireURLError
+from mangafire.parser import (
+    InvalidMangaFireURLError,
+    parse_direct_resource_url,
+)
 from mangafire.requests import (
     DownloadRequest,
     InvalidSelectionError,
@@ -43,13 +47,15 @@ def build_parser() -> argparse.ArgumentParser:
             "  mangafire-dl URL --lang en --chapters 1-20\n"
             "  mangafire-dl URL --lang en --chapters 1-5, 10, 12-15\n"
             "  mangafire-dl URL --lang pt-br --volumes 1-5 "
-            '--output "D:\\Mangas"'
+            '--output "D:\\Mangas"\n'
+            "  mangafire-dl VOLUME_URL\n"
+            "  mangafire-dl CHAPTER_URL"
         ),
     )
 
     parser.add_argument(
         "url",
-        help="MangaFire manga URL.",
+        help="MangaFire manga, volume, or chapter URL.",
     )
 
     parser.add_argument(
@@ -60,9 +66,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--lang",
-        required=True,
         metavar="LANGUAGE",
-        help="Language of the volumes or chapters. E.g.: pt-br, en, es.",
+        help=("Language of the volumes or chapters. Required when using a manga URL."),
     )
 
     parser.add_argument(
@@ -74,7 +79,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
-    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group = parser.add_mutually_exclusive_group()
 
     mode_group.add_argument(
         "--volumes",
@@ -104,6 +109,11 @@ def show_progress(progress: DownloadProgress) -> None:
 
     resource = progress.resource
 
+    if resource is None:
+        if not progress.completed:
+            print(f"[{progress.index}/{progress.total}] Downloading direct resource...")
+        return
+
     if isinstance(resource, Volume):
         resource_type = "volume"
     elif isinstance(resource, Chapter):
@@ -131,30 +141,64 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
 
-    mode = "volumes" if args.volumes is not None else "chapters"
-    selection_text = args.volumes if args.volumes is not None else args.chapters
-
     try:
-        selections = parse_selections(
-            selection_text,
+        direct_resource = parse_direct_resource_url(
+            args.url,
         )
 
-        request = DownloadRequest(
-            manga_url=args.url,
-            language=args.lang,
-            mode=mode,
-            selections=selections,
-        )
+        if direct_resource is not None:
+            if (
+                args.lang is not None
+                or args.volumes is not None
+                or args.chapters is not None
+            ):
+                parser.error(
+                    "Direct volume/chapter URLs cannot be used with "
+                    "--lang, --volumes, or --chapters."
+                )
 
-        service = MangaFireDownloadService()
+            service = MangaFireDownloadService()
 
-        service.download(
-            request,
-            progress_callback=show_progress,
-            output_directory=args.output,
-        )
+            service.download_direct(
+                args.url,
+                progress_callback=show_progress,
+                output_directory=args.output,
+            )
+
+        else:
+            if args.lang is None:
+                parser.error("--lang is required when using a manga URL.")
+
+            if args.volumes is None and args.chapters is None:
+                parser.error(
+                    "Either --volumes or --chapters is required when using a manga URL."
+                )
+
+            mode = "volumes" if args.volumes is not None else "chapters"
+            selection_text = args.volumes if args.volumes is not None else args.chapters
+
+            selections = parse_selections(
+                selection_text,
+            )
+
+            request = DownloadRequest(
+                manga_url=args.url,
+                language=args.lang,
+                mode=mode,
+                selections=selections,
+            )
+
+            service = MangaFireDownloadService()
+
+            service.download(
+                request,
+                progress_callback=show_progress,
+                output_directory=args.output,
+            )
 
     except InvalidSelectionError:
+        selection_text = args.volumes if args.volumes is not None else args.chapters
+
         print(
             f"Selection error: Invalid selection: {selection_text}",
             file=sys.stderr,
@@ -188,6 +232,14 @@ def main() -> int:
         print(
             "Download error: gallery-dl completed successfully, "
             "but no CBZ archive was produced.",
+            file=sys.stderr,
+        )
+        return 1
+
+    except GalleryDLArchiveNameError:
+        print(
+            "Download error: Could not determine the resource number "
+            "from the CBZ archive produced by gallery-dl.",
             file=sys.stderr,
         )
         return 1

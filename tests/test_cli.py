@@ -22,7 +22,7 @@ def test_version(capsys):
 
     captured = capsys.readouterr()
 
-    assert captured.out == "mangafire-dl 0.3.0\n"
+    assert captured.out == "mangafire-dl 0.4.0\n"
 
 
 def test_help(capsys):

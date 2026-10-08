@@ -10,6 +10,10 @@ from .output import (
     build_output_path,
     resolve_output_directory,
 )
+from .parser import (
+    DirectResource,
+    parse_direct_resource_url,
+)
 from .requests import DownloadRequest
 from .resolver import MangaFireResolver
 from .urls import build_chapter_url, build_volume_url
@@ -40,7 +44,7 @@ class DownloadProgress:
 
     index: int
     total: int
-    resource: Volume | Chapter
+    resource: Volume | Chapter | None
     url: str
     completed: bool
 
@@ -120,6 +124,101 @@ class MangaFireDownloadService:
                         completed=True,
                     )
                 )
+
+    def download_direct(
+        self,
+        url: str,
+        progress_callback: ProgressCallback | None = None,
+        output_directory: str | Path | None = None,
+    ) -> None:
+        """Baixa diretamente uma URL de volume ou capítulo."""
+
+        direct_resource = parse_direct_resource_url(url)
+
+        if direct_resource is None:
+            raise ValueError("The provided URL is not a direct volume or chapter URL.")
+
+        output_root = resolve_output_directory(
+            output_directory,
+        )
+
+        manga_title = self._manga_title_from_url(
+            direct_resource.manga_url,
+        )
+
+        resource_directory = (
+            output_root
+            / manga_title
+            / ("volumes" if direct_resource.resource_type == "volume" else "chapters")
+        )
+
+        if progress_callback is not None:
+            progress_callback(
+                DownloadProgress(
+                    index=1,
+                    total=1,
+                    resource=None,
+                    url=url,
+                    completed=False,
+                )
+            )
+
+        archive = self.downloader.download_to_directory(
+            url,
+            resource_directory,
+        )
+
+        number = self.downloader.parse_archive_number(
+            archive.name,
+            direct_resource.resource_type,
+        )
+
+        if direct_resource.resource_type == "volume":
+            resource = Volume(
+                id=int(direct_resource.resource_id),
+                number=number,
+                name=f"Volume {number:g}",
+                language="",
+                chapter_count=0,
+            )
+        else:
+            resource = Chapter(
+                id=int(direct_resource.resource_id),
+                number=number,
+                name=f"Chapter {number:g}",
+                language="",
+                type="",
+            )
+
+        destination = build_output_path(
+            output_directory=output_root,
+            manga_url=direct_resource.manga_url,
+            resource=resource,
+        )
+
+        archive.replace(destination)
+
+        if progress_callback is not None:
+            progress_callback(
+                DownloadProgress(
+                    index=1,
+                    total=1,
+                    resource=resource,
+                    url=url,
+                    completed=True,
+                )
+            )
+
+    @staticmethod
+    def _manga_title_from_url(
+        manga_url: str,
+    ) -> str:
+        from .output import sanitize_path_component
+        from .parser import parse_manga_title
+
+        return sanitize_path_component(
+            parse_manga_title(manga_url),
+        )
 
     @staticmethod
     def _build_url(
