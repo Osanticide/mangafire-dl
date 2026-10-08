@@ -1,10 +1,27 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Callable
+
 from .downloader import GalleryDLDownloader
 from .models import Chapter, Volume
 from .requests import DownloadRequest
 from .resolver import MangaFireResolver
 from .urls import build_chapter_url, build_volume_url
+
+
+@dataclass(frozen=True)
+class DownloadProgress:
+    """Representa o progresso de um recurso durante o download."""
+
+    index: int
+    total: int
+    resource: Volume | Chapter
+    url: str
+    completed: bool
+
+
+ProgressCallback = Callable[[DownloadProgress], None]
 
 
 class MangaFireDownloadService:
@@ -18,14 +35,42 @@ class MangaFireDownloadService:
         self.resolver = resolver or MangaFireResolver()
         self.downloader = downloader or GalleryDLDownloader()
 
-    def download(self, request: DownloadRequest) -> None:
+    def download(
+        self,
+        request: DownloadRequest,
+        progress_callback: ProgressCallback | None = None,
+    ) -> None:
         """Resolve e baixa todos os recursos da solicitação em sequência."""
 
         resources = self.resolver.resolve_request(request)
+        total = len(resources)
 
-        for resource in resources:
+        for index, resource in enumerate(resources, start=1):
             url = self._build_url(request.manga_url, resource)
+
+            if progress_callback is not None:
+                progress_callback(
+                    DownloadProgress(
+                        index=index,
+                        total=total,
+                        resource=resource,
+                        url=url,
+                        completed=False,
+                    )
+                )
+
             self.downloader.download(url)
+
+            if progress_callback is not None:
+                progress_callback(
+                    DownloadProgress(
+                        index=index,
+                        total=total,
+                        resource=resource,
+                        url=url,
+                        completed=True,
+                    )
+                )
 
     @staticmethod
     def _build_url(
