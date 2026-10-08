@@ -3,11 +3,17 @@ from __future__ import annotations
 import argparse
 import sys
 
+import requests
+
 from mangafire.download_service import (
     DownloadProgress,
     MangaFireDownloadService,
+    NoResourcesFoundError,
 )
-from mangafire.downloader import GalleryDLDownloadError
+from mangafire.downloader import (
+    GalleryDLDownloadError,
+    GalleryDLNotFoundError,
+)
 from mangafire.models import Chapter, Volume
 from mangafire.parser import InvalidMangaFireURLError
 from mangafire.requests import (
@@ -15,53 +21,80 @@ from mangafire.requests import (
     InvalidSelectionError,
     parse_selections,
 )
+from mangafire.version import __version__
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Cria o parser de argumentos da linha de comando."""
+    """Creates the command-line argument parser."""
 
     parser = argparse.ArgumentParser(
         prog="mangafire-dl",
-        description="Baixa mangás do MangaFire em formato CBZ.",
+        description=(
+            "Download manga volumes and chapters from MangaFire "
+            "in CBZ format using gallery-dl."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  mangafire-dl URL --lang pt-br --volumes 1-5\n"
+            "  mangafire-dl URL --lang pt-br --volumes 1, 6, 12\n"
+            "  mangafire-dl URL --lang en --chapters 1-20\n"
+            "  mangafire-dl URL --lang en --chapters 1-5, 10, 12-15"
+        ),
     )
 
     parser.add_argument(
         "url",
-        help="URL do mangá no MangaFire.",
+        help="MangaFire manga URL.",
+    )
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
 
     parser.add_argument(
         "--lang",
         required=True,
-        help="Idioma dos volumes ou capítulos. Ex.: pt-br, en, es.",
+        metavar="LANGUAGE",
+        help="Language of the volumes or chapters. E.g.: pt-br, en, es.",
     )
 
     mode_group = parser.add_mutually_exclusive_group(required=True)
 
     mode_group.add_argument(
         "--volumes",
-        metavar="SELEÇÃO",
-        help="Volumes a baixar. Ex.: 1-5, 8, 12-15.",
+        metavar="SELECTION",
+        help=(
+            "Volumes to download. "
+            "Accepts numbers, ranges, and lists. "
+            "E.g.: 1-5, 8, 12-15."
+        ),
     )
 
     mode_group.add_argument(
         "--chapters",
-        metavar="SELEÇÃO",
-        help="Capítulos a baixar. Ex.: 1-5, 8, 12-15.",
+        metavar="SELECTION",
+        help=(
+            "Chapters to download. "
+            "Accepts numbers, ranges, and lists. "
+            "E.g.: 1-5, 8, 12-15."
+        ),
     )
 
     return parser
 
 
 def show_progress(progress: DownloadProgress) -> None:
-    """Exibe o progresso de um recurso no terminal."""
+    """Displays resource download progress in the terminal."""
 
     resource = progress.resource
 
     if isinstance(resource, Volume):
         resource_type = "volume"
     elif isinstance(resource, Chapter):
-        resource_type = "capítulo"
+        resource_type = "chapter"
     else:
         return
 
@@ -69,18 +102,18 @@ def show_progress(progress: DownloadProgress) -> None:
         print(
             f"[{progress.index}/{progress.total}] "
             f"✓ {resource_type.capitalize()} "
-            f"{resource.number:g} concluído."
+            f"{resource.number:g} completed."
         )
     else:
         print(
             f"[{progress.index}/{progress.total}] "
-            f"Baixando {resource_type} "
+            f"Downloading {resource_type} "
             f"{resource.number:g}..."
         )
 
 
 def main() -> int:
-    """Executa o programa."""
+    """Runs the application."""
 
     parser = build_parser()
     args = parser.parse_args()
@@ -106,23 +139,56 @@ def main() -> int:
         )
 
     except InvalidSelectionError as exc:
-        print(f"Erro: seleção inválida: {exc}", file=sys.stderr)
+        print(
+            f"Selection error: {exc}",
+            file=sys.stderr,
+        )
         return 1
 
     except InvalidMangaFireURLError as exc:
-        print(f"Erro: URL inválida: {exc}", file=sys.stderr)
+        print(
+            f"URL error: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    except NoResourcesFoundError as exc:
+        print(
+            f"Error: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    except GalleryDLNotFoundError as exc:
+        print(
+            f"Error: {exc}",
+            file=sys.stderr,
+        )
         return 1
 
     except GalleryDLDownloadError as exc:
-        print(f"Erro durante o download: {exc}", file=sys.stderr)
+        print(
+            f"Download error: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    except requests.RequestException as exc:
+        print(
+            f"MangaFire communication error: {exc}",
+            file=sys.stderr,
+        )
         return 1
 
     except Exception as exc:
-        print(f"Erro inesperado: {exc}", file=sys.stderr)
+        print(
+            f"Unexpected error: {exc}",
+            file=sys.stderr,
+        )
         return 1
 
     print()
-    print("Todos os downloads foram concluídos.")
+    print("All downloads completed successfully.")
 
     return 0
 

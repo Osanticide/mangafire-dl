@@ -10,6 +10,25 @@ from .resolver import MangaFireResolver
 from .urls import build_chapter_url, build_volume_url
 
 
+class NoResourcesFoundError(RuntimeError):
+    """Indica que nenhuma correspondência foi encontrada para a solicitação."""
+
+    def __init__(
+        self,
+        mode: str,
+        language: str,
+        selections: tuple[tuple[float, float], ...],
+    ) -> None:
+        self.mode = mode
+        self.language = language
+        self.selections = selections
+
+        super().__init__(
+            "Nenhum recurso foi encontrado para a seleção informada "
+            f"(modo: {mode}, idioma: {language})."
+        )
+
+
 @dataclass(frozen=True)
 class DownloadProgress:
     """Representa o progresso de um recurso durante o download."""
@@ -43,6 +62,14 @@ class MangaFireDownloadService:
         """Resolve e baixa todos os recursos da solicitação em sequência."""
 
         resources = self.resolver.resolve_request(request)
+
+        if not resources:
+            raise NoResourcesFoundError(
+                mode=request.mode,
+                language=request.language,
+                selections=request.selections,
+            )
+
         total = len(resources)
 
         for index, resource in enumerate(resources, start=1):
