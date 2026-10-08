@@ -23,4 +23,4 @@ def test_bleach_chapters_are_paginated():
         language="en",
     )
 
-    assert len(chapters) > 20
+    assert len(chapters) > 200
