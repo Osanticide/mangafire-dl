@@ -20,6 +20,32 @@ class MangaFireResolver:
     def __init__(self, api: MangaFireAPI | None = None) -> None:
         self.api = api or MangaFireAPI()
 
+    def resolve_request(
+        self,
+        request: DownloadRequest,
+    ) -> list[Volume | Chapter]:
+        """Resolve uma solicitação de download."""
+
+        manga_id = parse_manga_id(request.manga_url)
+
+        if request.mode == "volumes":
+            return self.resolve_volumes(
+                manga_id=manga_id,
+                language=request.language,
+                start=request.start,
+                end=request.end,
+            )
+
+        if request.mode == "chapters":
+            return self.resolve_chapters(
+                manga_id=manga_id,
+                language=request.language,
+                start=request.start,
+                end=request.end,
+            )
+
+        raise ValueError(f"Modo de download inválido: {request.mode}")
+
     def resolve_volumes(
         self,
         manga_id: str,
