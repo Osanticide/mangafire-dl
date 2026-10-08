@@ -94,7 +94,7 @@ def test_downloads_resources_sequentially(tmp_path):
     ]
 
 
-def test_downloads_chapters_sequentially():
+def test_downloads_chapters_sequentially(tmp_path):
     resolver = FakeChapterResolver()
     downloader = Mock()
 
@@ -110,7 +110,10 @@ def test_downloads_chapters_sequentially():
         selections=((1, 2),),
     )
 
-    service.download(request)
+    service.download(
+        request,
+        output_directory=tmp_path,
+    )
 
     assert downloader.download.call_count == 2
 
@@ -119,8 +122,13 @@ def test_downloads_chapters_sequentially():
         "https://mangafire.to/title/027-bleach/chapter/202",
     ]
 
+    assert [call.args[1] for call in downloader.download.call_args_list] == [
+        tmp_path / "Bleach/chapters/Bleach - Chapter 001.cbz",
+        tmp_path / "Bleach/chapters/Bleach - Chapter 002.cbz",
+    ]
 
-def test_download_stops_when_downloader_fails():
+
+def test_download_stops_when_downloader_fails(tmp_path):
     resolver = FakeResolver()
     downloader = Mock()
 
@@ -145,12 +153,15 @@ def test_download_stops_when_downloader_fails():
     )
 
     with pytest.raises(GalleryDLDownloadError):
-        service.download(request)
+        service.download(
+            request,
+            output_directory=tmp_path,
+        )
 
     assert downloader.download.call_count == 2
 
 
-def test_download_reports_progress():
+def test_download_reports_progress(tmp_path):
     resolver = FakeResolver()
     downloader = Mock()
     progress_callback = Mock()
@@ -170,6 +181,7 @@ def test_download_reports_progress():
     service.download(
         request,
         progress_callback=progress_callback,
+        output_directory=tmp_path,
     )
 
     assert progress_callback.call_count == 6

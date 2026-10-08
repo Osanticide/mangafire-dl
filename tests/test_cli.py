@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -21,7 +22,7 @@ def test_version(capsys):
 
     captured = capsys.readouterr()
 
-    assert captured.out == "mangafire-dl 0.2.0\n"
+    assert captured.out == "mangafire-dl 0.3.0\n"
 
 
 def test_help(capsys):
@@ -38,6 +39,7 @@ def test_help(capsys):
     assert "--version" in captured.out
     assert "--volumes" in captured.out
     assert "--chapters" in captured.out
+    assert "--output" in captured.out
     assert "Examples:" in captured.out
 
 
@@ -67,6 +69,39 @@ def test_main_downloads_successfully(monkeypatch):
 
     assert result == 0
     service.download.assert_called_once()
+
+    assert service.download.call_args.kwargs["output_directory"] is None
+
+
+def test_main_accepts_output_directory(monkeypatch):
+    service = Mock()
+
+    monkeypatch.setattr(
+        main,
+        "MangaFireDownloadService",
+        lambda: service,
+    )
+
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "https://mangafire.to/title/027-bleach",
+            "--lang",
+            "pt-br",
+            "--volumes",
+            "73",
+            "--output",
+            "D:/Mangas",
+        ],
+    )
+
+    result = main.main()
+
+    assert result == 0
+
+    assert service.download.call_args.kwargs["output_directory"] == Path("D:/Mangas")
 
 
 def test_main_handles_invalid_selection(monkeypatch, capsys):
