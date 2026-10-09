@@ -6,7 +6,7 @@ Uma ferramenta de linha de comando para baixar volumes e capítulos do MangaFire
 
 **Construído sobre o [`gallery-dl`](https://github.com/mikf/gallery-dl).** O MangaFire Downloader depende do projeto `gallery-dl` para a infraestrutura de extração e download. Este projeto não existiria em sua forma atual sem o trabalho dos desenvolvedores e contribuidores do `gallery-dl`.
 
-> **Estado do projeto:** versão 0.5.0. O pacote Python e o ZIP portátil para Windows estão preparados para lançamento; consulte as [GitHub Releases](https://github.com/Osanticide/mangafire-dl/releases) para baixar versões publicadas.
+> **Última versão:** [v0.5.0](https://github.com/Osanticide/mangafire-dl/releases/tag/v0.5.0). Instale pelo [PyPI](https://pypi.org/project/mangafire-dl/) ou baixe o [ZIP portátil para Windows](https://github.com/Osanticide/mangafire-dl/releases/download/v0.5.0/mangafire-dl-windows-x64-0.5.0.zip).
 
 ## Funcionalidades
 
@@ -53,8 +53,6 @@ python -m pip install mangafire-dl
 ```
 
 No Linux ou macOS, ative o ambiente com `source .venv/bin/activate` em vez do comando de ativação do PowerShell.
-
-> Os comandos de instalação pelo PyPI estarão disponíveis assim que uma versão for publicada lá. Até lá, use o ZIP portátil para Windows ou instale a partir de uma cópia local do código-fonte para desenvolvimento.
 
 ## Início rápido
 
