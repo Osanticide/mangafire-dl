@@ -7,5 +7,4 @@ venv/
 
 build/
 dist/
-packaging/
 *.egg-info/
