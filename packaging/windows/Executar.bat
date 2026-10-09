@@ -9,7 +9,7 @@ if not exist "%~dp0mangafire-dl.exe" goto missing_exe
 
 cls
 echo ========================================
-echo       MangaFire Downloader 0.5.0
+echo       MangaFire Downloader @VERSION@
 echo ========================================
 echo.
 echo This launcher makes the command-line

@@ -12,7 +12,6 @@ requires-python = ">=3.10"
 dependencies = ["gallery-dl>=1.32.15,<2", "requests>=2.32,<3"]
 
 [project.optional-dependencies]
-[project.optional-dependencies]
 dev = ["pytest>=9,<10", "build>=1.2,<2", "pyinstaller>=6.15,<7"]
 
 [project.scripts]
