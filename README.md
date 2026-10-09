@@ -207,7 +207,7 @@ Bug reports, suggestions, and pull requests are welcome. Before opening a pull r
 
 ## License
 
-A project license has not yet been selected. License terms will be added before the first public package release. Until then, do not assume that the repository grants permission to redistribute or relicense the code.
+The original MangaFire Downloader project is licensed under the [MIT License](LICENSE). Third-party components, including [`gallery-dl`](https://github.com/mikf/gallery-dl), remain subject to their respective licenses.
 
 ## Acknowledgements
 

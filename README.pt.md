@@ -207,7 +207,7 @@ Relatos de bugs, sugestões e pull requests são bem-vindos. Antes de abrir um p
 
 ## Licença
 
-A licença do projeto ainda não foi escolhida. Os termos serão adicionados antes da primeira publicação pública do pacote. Até lá, não presuma que o repositório concede permissão para redistribuir ou relicenciar o código.
+O projeto original MangaFire Downloader é licenciado sob a [Licença MIT](LICENSE). Componentes de terceiros, incluindo o [`gallery-dl`](https://github.com/mikf/gallery-dl), continuam sujeitos às suas respectivas licenças.
 
 ## Agradecimentos
 
