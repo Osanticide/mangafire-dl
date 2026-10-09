@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-import main
+from mangafire import cli as main
 from mangafire.download_service import NoResourcesFoundError
 from mangafire.downloader import (
     GalleryDLDownloadError,
