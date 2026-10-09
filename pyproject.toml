@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 dependencies = ["gallery-dl>=1.32.15,<2", "requests>=2.32,<3"]
 
 [project.optional-dependencies]
-dev = ["pytest>=9,<10"]
+dev = ["pytest>=9,<10", "pyinstaller>=6.15,<7"]
 
 [project.scripts]
 mangafire-dl = "mangafire.cli:main"
