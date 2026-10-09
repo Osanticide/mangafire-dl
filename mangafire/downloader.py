@@ -2,22 +2,18 @@ from __future__ import annotations
 
 import re
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 
+from gallery_dl import config, job
+
 
 class GalleryDLNotFoundError(RuntimeError):
-    """Indica que o executável gallery-dl não foi encontrado."""
+    """Indica que o módulo gallery-dl não está disponível."""
 
-    def __init__(self, executable: str) -> None:
+    def __init__(self, executable: str = "gallery-dl") -> None:
         self.executable = executable
-
-        super().__init__(
-            f"Could not find the gallery-dl executable "
-            f"'{executable}'. Make sure gallery-dl is installed "
-            "and available in PATH."
-        )
+        super().__init__(f"Could not find the gallery-dl dependency '{executable}'.")
 
 
 class GalleryDLDownloadError(RuntimeError):
@@ -31,14 +27,13 @@ class GalleryDLDownloadError(RuntimeError):
 
 
 class GalleryDLArchiveNotFoundError(RuntimeError):
-    """Indica que nenhum arquivo CBZ foi produzido pelo gallery-dl."""
+    """Indica que não foi produzido exatamente um arquivo CBZ."""
 
     def __init__(self, url: str) -> None:
         self.url = url
 
         super().__init__(
-            "gallery-dl completed successfully, but no CBZ archive "
-            f"was produced for URL: {url}"
+            f"gallery-dl did not produce exactly one CBZ archive for URL: {url}"
         )
 
 
@@ -60,20 +55,14 @@ class GalleryDLArchiveNameError(RuntimeError):
 
 
 class GalleryDLDownloader:
-    """Executa o gallery-dl para baixar recursos do MangaFire."""
-
-    def __init__(
-        self,
-        executable: str = "gallery-dl",
-    ) -> None:
-        self.executable = executable
+    """Executa o gallery-dl como biblioteca Python."""
 
     def download(
         self,
         url: str,
         destination: str | Path,
     ) -> Path:
-        """Baixa uma URL usando gallery-dl e move o CBZ produzido."""
+        """Baixa uma URL e move o CBZ para o caminho de destino."""
 
         destination = Path(destination)
         destination.parent.mkdir(
@@ -84,45 +73,13 @@ class GalleryDLDownloader:
         with tempfile.TemporaryDirectory(
             prefix="mangafire-dl-",
         ) as temporary_directory:
-            try:
-                result = subprocess.run(
-                    [
-                        self.executable,
-                        "--config-ignore",
-                        "--cbz",
-                        "-d",
-                        temporary_directory,
-                        url,
-                    ],
-                    check=False,
-                )
-            except FileNotFoundError as exc:
-                raise GalleryDLNotFoundError(
-                    executable=self.executable,
-                ) from exc
-
-            if result.returncode != 0:
-                raise GalleryDLDownloadError(
-                    url=url,
-                    returncode=result.returncode,
-                )
-
-            archives = sorted(
-                Path(temporary_directory).rglob("*.cbz"),
+            archive = self._download_archive(
+                url,
+                temporary_directory,
             )
 
-            if not archives:
-                raise GalleryDLArchiveNotFoundError(
-                    url=url,
-                )
-
-            if len(archives) > 1:
-                raise GalleryDLArchiveNotFoundError(
-                    url=url,
-                )
-
             shutil.move(
-                str(archives[0]),
+                str(archive),
                 str(destination),
             )
 
@@ -133,7 +90,7 @@ class GalleryDLDownloader:
         url: str,
         destination_directory: str | Path,
     ) -> Path:
-        """Baixa uma URL e preserva o nome original do CBZ produzido."""
+        """Baixa uma URL e preserva o nome original do CBZ."""
 
         destination_directory = Path(destination_directory)
         destination_directory.mkdir(
@@ -144,44 +101,11 @@ class GalleryDLDownloader:
         with tempfile.TemporaryDirectory(
             prefix="mangafire-dl-",
         ) as temporary_directory:
-            try:
-                result = subprocess.run(
-                    [
-                        self.executable,
-                        "--config-ignore",
-                        "--cbz",
-                        "-d",
-                        temporary_directory,
-                        url,
-                    ],
-                    check=False,
-                )
-            except FileNotFoundError as exc:
-                raise GalleryDLNotFoundError(
-                    executable=self.executable,
-                ) from exc
-
-            if result.returncode != 0:
-                raise GalleryDLDownloadError(
-                    url=url,
-                    returncode=result.returncode,
-                )
-
-            archives = sorted(
-                Path(temporary_directory).rglob("*.cbz"),
+            archive = self._download_archive(
+                url,
+                temporary_directory,
             )
 
-            if not archives:
-                raise GalleryDLArchiveNotFoundError(
-                    url=url,
-                )
-
-            if len(archives) > 1:
-                raise GalleryDLArchiveNotFoundError(
-                    url=url,
-                )
-
-            archive = archives[0]
             destination = destination_directory / archive.name
 
             shutil.move(
@@ -190,6 +114,51 @@ class GalleryDLDownloader:
             )
 
         return destination
+
+    @staticmethod
+    def _download_archive(
+        url: str,
+        temporary_directory: str | Path,
+    ) -> Path:
+        """Executa o download em um ambiente de configuração controlado."""
+
+        # Não carrega os arquivos de configuração pessoais do gallery-dl.
+        config.clear()
+
+        config.set(
+            ("extractor",),
+            "base-directory",
+            str(temporary_directory),
+        )
+
+        config.set(
+            ("extractor",),
+            "postprocessors",
+            [
+                {
+                    "name": "zip",
+                    "extension": "cbz",
+                }
+            ],
+        )
+
+        download_job = job.DownloadJob(url)
+        returncode = download_job.run()
+
+        if returncode != 0:
+            raise GalleryDLDownloadError(
+                url=url,
+                returncode=returncode,
+            )
+
+        archives = sorted(
+            Path(temporary_directory).rglob("*.cbz"),
+        )
+
+        if len(archives) != 1:
+            raise GalleryDLArchiveNotFoundError(url)
+
+        return archives[0]
 
     @staticmethod
     def parse_archive_number(
