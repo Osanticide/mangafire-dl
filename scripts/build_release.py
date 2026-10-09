@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+# automação de build
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION_FILE = ROOT / "src" / "mangafire" / "version.py"
