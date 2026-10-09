@@ -1,0 +1,25 @@
+
+[build-system]
+requires = ["hatchling>=1.26.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mangafire-dl"
+dynamic = ["version"]
+description = "Download manga volumes and chapters from MangaFire in CBZ format."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["gallery-dl>=1.32.15,<2", "requests>=2.32,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=9,<10"]
+
+[project.scripts]
+mangafire-dl = "mangafire.cli:main"
+
+[tool.hatch.version]
+source = "regex"
+path = "src/mangafire/version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mangafire"]
