@@ -43,14 +43,16 @@ def build_output_path(
     output_directory: str | Path,
     manga_url: str,
     resource: Volume | Chapter,
+    manga_title: str | None = None,
 ) -> Path:
     """Constrói o caminho final de um recurso baixado."""
 
     output_directory = Path(output_directory)
 
-    manga_title = sanitize_path_component(
-        parse_manga_title(manga_url),
-    )
+    if manga_title is None:
+        manga_title = parse_manga_title(manga_url)
+
+    manga_title = sanitize_path_component(manga_title)
 
     if isinstance(resource, Volume):
         resource_number = format_resource_number(

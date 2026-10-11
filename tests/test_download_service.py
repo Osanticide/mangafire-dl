@@ -6,6 +6,8 @@ from mangafire.download_service import (
     DownloadProgress,
     MangaFireDownloadService,
 )
+
+from mangafire.models import Chapter, Manga, Volume
 from mangafire.downloader import GalleryDLDownloadError
 from mangafire.models import Chapter, Volume
 from mangafire.requests import DownloadRequest
@@ -207,3 +209,38 @@ def test_download_reports_progress(tmp_path):
         3,
         3,
     ]
+
+
+def test_download_uses_api_title_for_output_path(tmp_path):
+    resolver = FakeResolver()
+    downloader = Mock()
+    api = Mock()
+
+    api.get_manga.return_value = Manga(
+        id="v92q7",
+        title="Kagurabachi",
+    )
+
+    service = MangaFireDownloadService(
+        resolver=resolver,
+        downloader=downloader,
+        api=api,
+    )
+
+    request = DownloadRequest(
+        manga_url="https://mangafire.to/title/v92q7-kagurabachii",
+        language="pt-br",
+        mode="volumes",
+        selections=((1, 1),),
+    )
+
+    service.download(
+        request,
+        output_directory=tmp_path,
+    )
+
+    assert downloader.download.call_args_list[0].args[1] == (
+        tmp_path / "Kagurabachi" / "volumes" / "Kagurabachi - Volume 01.cbz"
+    )
+
+    api.get_manga.assert_called_once_with("v92q7")

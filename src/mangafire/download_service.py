@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from .api import MangaFireAPI
+
 from .downloader import GalleryDLDownloader
 from .models import Chapter, Volume
 from .output import (
@@ -17,6 +19,7 @@ from .parser import (
 from .requests import DownloadRequest
 from .resolver import MangaFireResolver
 from .urls import build_chapter_url, build_volume_url
+from .parser import parse_manga_id
 
 
 class NoResourcesFoundError(RuntimeError):
@@ -59,9 +62,11 @@ class MangaFireDownloadService:
         self,
         resolver: MangaFireResolver | None = None,
         downloader: GalleryDLDownloader | None = None,
+        api: MangaFireAPI | None = None,
     ) -> None:
         self.resolver = resolver or MangaFireResolver()
         self.downloader = downloader or GalleryDLDownloader()
+        self.api = api or MangaFireAPI()
 
     def download(
         self,
@@ -70,6 +75,8 @@ class MangaFireDownloadService:
         output_directory: str | Path | None = None,
     ) -> None:
         """Resolve e baixa todos os recursos da solicitação em sequência."""
+        manga_id = parse_manga_id(request.manga_url)
+        manga = self.api.get_manga(manga_id)
 
         resources = self.resolver.resolve_request(request)
 

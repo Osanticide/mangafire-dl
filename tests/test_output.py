@@ -74,3 +74,24 @@ def test_build_chapter_output_path():
     )
 
     assert result == Path("D:/Mangas/Bleach/chapters/Bleach - Chapter 001.cbz")
+
+
+def test_build_volume_output_path_uses_api_title(tmp_path):
+    resource = Volume(
+        id=46758,
+        number=1,
+        name="Volume 1",
+        language="pt-br",
+        chapter_count=10,
+    )
+
+    result = build_output_path(
+        output_directory=tmp_path,
+        manga_url="https://mangafire.to/title/v92q7-kagurabachii",
+        resource=resource,
+        manga_title="Kagurabachi",
+    )
+
+    assert result == (
+        tmp_path / "Kagurabachi" / "volumes" / "Kagurabachi - Volume 01.cbz"
+    )

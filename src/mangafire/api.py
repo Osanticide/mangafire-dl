@@ -4,6 +4,7 @@ from typing import Any
 
 import requests
 
+from .models import Chapter, Manga, Volume
 from .models import Chapter, Volume
 from .vrf import generate_vrf
 
@@ -103,6 +104,16 @@ class MangaFireAPI:
             page += 1
 
         return all_items
+
+    def get_manga(self, manga_id: str) -> Manga:
+        """Obtém os dados básicos de um mangá pelo seu identificador."""
+
+        data = self._get(f"titles/{manga_id}")["data"]
+
+        return Manga(
+            id=data["hid"],
+            title=data["title"],
+        )
 
     def get_volumes(self, manga_id: str) -> list[Volume]:
         """Obtém os volumes de um mangá."""
