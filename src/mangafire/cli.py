@@ -49,6 +49,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  mangafire-dl URL --lang en --chapters 1-5, 10, 12-15\n"
             "  mangafire-dl URL --lang pt-br --volumes 1-5 "
             '--output "D:\\Mangas"\n'
+            "  mangafire-dl URL --lang pt-br --list volumes\n"
+            "  mangafire-dl URL --lang pt-br --list chapters\n"
             "  mangafire-dl VOLUME_URL\n"
             "  mangafire-dl CHAPTER_URL"
         ),
@@ -143,6 +145,47 @@ def show_progress(progress: DownloadProgress) -> None:
         )
 
 
+def show_volume_listing(volumes: list[Volume], language: str) -> None:
+    """Displays available volumes and their chapter counts."""
+
+    print(f"Available volumes ({language})")
+    print()
+
+    for volume in volumes:
+        chapter_label = "chapter" if volume.chapter_count == 1 else "chapters"
+        print(f"Volume {volume.number:g} — {volume.chapter_count} {chapter_label}")
+
+    print()
+    volume_label = "volume" if len(volumes) == 1 else "volumes"
+    print(f"Total: {len(volumes)} {volume_label}")
+
+
+def show_chapter_listing(chapters: list[Chapter], language: str) -> None:
+    """Displays available chapters in four columns."""
+
+    print(f"Available chapters ({language})")
+    print()
+
+    columns = 4
+    items = [f"{chapter.number:g} [{chapter.type}]" for chapter in chapters]
+
+    column_width = (
+        max(
+            (len(item) for item in items),
+            default=0,
+        )
+        + 2
+    )
+
+    for index in range(0, len(items), columns):
+        row = items[index : index + columns]
+        print("".join(item.ljust(column_width) for item in row).rstrip())
+
+    print()
+    chapter_label = "chapter" if len(chapters) == 1 else "chapters"
+    print(f"Total: {len(chapters)} {chapter_label}")
+
+
 def main() -> int:
     """Runs the application."""
 
@@ -154,6 +197,28 @@ def main() -> int:
         direct_resource = parse_direct_resource_url(
             args.url,
         )
+
+        if args.list is not None:
+            if args.lang is None:
+                parser.error("--lang is required when using --list.")
+
+            service = MangaFireDownloadService()
+
+            if args.list == "volumes":
+                resources = service.list_volumes(
+                    manga_url=args.url,
+                    language=args.lang,
+                )
+                show_volume_listing(resources, args.lang)
+
+            else:
+                resources = service.list_chapters(
+                    manga_url=args.url,
+                    language=args.lang,
+                )
+                show_chapter_listing(resources, args.lang)
+
+            return 0
 
         if direct_resource is not None:
             if (

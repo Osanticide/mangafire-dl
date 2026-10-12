@@ -4,6 +4,7 @@ from unittest.mock import Mock
 import pytest
 
 from mangafire.models import Volume
+from mangafire.models import Chapter
 
 from mangafire import cli as main
 from mangafire.download_service import NoResourcesFoundError
@@ -521,6 +522,124 @@ def test_main_lists_volumes(monkeypatch, capsys):
 
     assert result == 0
     service.list_volumes.assert_called_once_with(
+        manga_url="https://mangafire.to/title/v92q7",
+        language="pt-br",
+    )
+    service.download.assert_not_called()
+    service.download_direct.assert_not_called()
+
+
+def test_main_formats_volume_listing(monkeypatch, capsys):
+    service = Mock()
+    service.list_volumes.return_value = [
+        Volume(
+            id=101,
+            number=1,
+            name="Volume 1",
+            language="pt-br",
+            chapter_count=10,
+        ),
+        Volume(
+            id=102,
+            number=2,
+            name="Volume 2",
+            language="pt-br",
+            chapter_count=9,
+        ),
+    ]
+
+    monkeypatch.setattr(
+        main,
+        "MangaFireDownloadService",
+        lambda: service,
+    )
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--list",
+            "volumes",
+            "--lang",
+            "pt-br",
+        ],
+    )
+
+    result = main.main()
+    output = capsys.readouterr().out
+
+    assert result == 0
+    assert "Available volumes (pt-br)" in output
+    assert "Volume 1" in output
+    assert "10 chapters" in output
+    assert "Volume 2" in output
+    assert "9 chapters" in output
+    assert "Total: 2 volumes" in output
+
+    service.list_volumes.assert_called_once_with(
+        manga_url="https://mangafire.to/title/v92q7",
+        language="pt-br",
+    )
+    service.download.assert_not_called()
+    service.download_direct.assert_not_called()
+
+
+def test_main_formats_chapter_listing(monkeypatch, capsys):
+    service = Mock()
+    service.list_chapters.return_value = [
+        Chapter(
+            id=201,
+            number=1,
+            name="Chapter 1",
+            language="pt-br",
+            type="official",
+        ),
+        Chapter(
+            id=202,
+            number=2,
+            name="Chapter 2",
+            language="pt-br",
+            type="unofficial",
+        ),
+        Chapter(
+            id=203,
+            number=636.5,
+            name="Special Chapter",
+            language="pt-br",
+            type="official",
+        ),
+    ]
+
+    monkeypatch.setattr(
+        main,
+        "MangaFireDownloadService",
+        lambda: service,
+    )
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--list",
+            "chapters",
+            "--lang",
+            "pt-br",
+        ],
+    )
+
+    result = main.main()
+    output = capsys.readouterr().out
+
+    assert result == 0
+    assert "Available chapters (pt-br)" in output
+    assert "1 [official]" in output
+    assert "2 [unofficial]" in output
+    assert "636.5 [official]" in output
+    assert "Total: 3 chapters" in output
+
+    service.list_chapters.assert_called_once_with(
         manga_url="https://mangafire.to/title/v92q7",
         language="pt-br",
     )
