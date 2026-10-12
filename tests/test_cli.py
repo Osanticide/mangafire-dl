@@ -307,3 +307,38 @@ def test_main_handles_unexpected_error(monkeypatch, capsys):
 
     assert "Unexpected error:" in captured.err
     assert "An unexpected error occurred." in captured.err
+
+
+def test_main_accepts_manga_id(monkeypatch):
+    service = Mock()
+
+    monkeypatch.setattr(
+        main,
+        "MangaFireDownloadService",
+        lambda: service,
+    )
+
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--lang",
+            "pt-br",
+            "--volumes",
+            "1",
+        ],
+    )
+
+    result = main.main()
+
+    assert result == 0
+    service.download.assert_called_once()
+
+    request = service.download.call_args.args[0]
+
+    assert request.manga_url == "https://mangafire.to/title/v92q7"
+    assert request.language == "pt-br"
+    assert request.mode == "volumes"
+    assert request.selections == ((1, 1),)

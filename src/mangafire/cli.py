@@ -21,6 +21,7 @@ from mangafire.models import Chapter, Volume
 from mangafire.parser import (
     InvalidMangaFireURLError,
     parse_direct_resource_url,
+    normalize_manga_url,
 )
 from mangafire.requests import (
     DownloadRequest,
@@ -142,6 +143,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        args.url = normalize_manga_url(args.url)
         direct_resource = parse_direct_resource_url(
             args.url,
         )

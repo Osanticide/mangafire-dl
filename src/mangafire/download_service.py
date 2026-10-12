@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Callable
 
 from .api import MangaFireAPI
-
 from .downloader import GalleryDLDownloader
 from .models import Chapter, Volume
 from .output import (
@@ -15,11 +14,11 @@ from .output import (
 from .parser import (
     DirectResource,
     parse_direct_resource_url,
+    parse_manga_id,
 )
 from .requests import DownloadRequest
 from .resolver import MangaFireResolver
 from .urls import build_chapter_url, build_volume_url
-from .parser import parse_manga_id
 
 
 class NoResourcesFoundError(RuntimeError):
@@ -75,6 +74,7 @@ class MangaFireDownloadService:
         output_directory: str | Path | None = None,
     ) -> None:
         """Resolve e baixa todos os recursos da solicitação em sequência."""
+
         manga_id = parse_manga_id(request.manga_url)
         manga = self.api.get_manga(manga_id)
 
@@ -103,6 +103,7 @@ class MangaFireDownloadService:
                 output_directory=output_root,
                 manga_url=request.manga_url,
                 resource=resource,
+                manga_title=manga.title,
             )
 
             if progress_callback is not None:

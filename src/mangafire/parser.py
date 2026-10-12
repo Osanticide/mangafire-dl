@@ -122,3 +122,16 @@ def parse_direct_resource_url(
         resource_type=parts[2],
         resource_id=resource_id,
     )
+
+
+def normalize_manga_url(value: str) -> str:
+    """Convert a bare MangaFire manga ID into its canonical title URL."""
+    if value.startswith(("http://", "https://")):
+        return value
+
+    if value and value.isalnum():
+        return f"https://mangafire.to/title/{value}"
+
+    raise InvalidMangaFireURLError(
+        "The provided value is neither a valid MangaFire URL nor a manga ID."
+    )
