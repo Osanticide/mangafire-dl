@@ -9,7 +9,6 @@ from mangafire.download_service import (
 
 from mangafire.models import Chapter, Manga, Volume
 from mangafire.downloader import GalleryDLDownloadError
-from mangafire.models import Chapter, Volume
 from mangafire.requests import DownloadRequest
 
 
@@ -244,3 +243,57 @@ def test_download_uses_api_title_for_output_path(tmp_path):
     )
 
     api.get_manga.assert_called_once_with("v92q7")
+
+
+def test_list_volumes_delegates_to_resolver():
+    resolver = Mock()
+    expected_volumes = [
+        Volume(
+            id=101,
+            number=1,
+            name="Volume 1",
+            language="pt-br",
+            chapter_count=10,
+        ),
+    ]
+    resolver.list_volumes.return_value = expected_volumes
+
+    service = MangaFireDownloadService(resolver=resolver)
+
+    volumes = service.list_volumes(
+        manga_url="https://mangafire.to/title/027-bleach",
+        language="pt-br",
+    )
+
+    assert volumes == expected_volumes
+    resolver.list_volumes.assert_called_once_with(
+        manga_id="027",
+        language="pt-br",
+    )
+
+
+def test_list_chapters_delegates_to_resolver():
+    resolver = Mock()
+    expected_chapters = [
+        Chapter(
+            id=201,
+            number=1,
+            name="Chapter 1",
+            language="en",
+            type="official",
+        ),
+    ]
+    resolver.list_chapters.return_value = expected_chapters
+
+    service = MangaFireDownloadService(resolver=resolver)
+
+    chapters = service.list_chapters(
+        manga_url="https://mangafire.to/title/027-bleach",
+        language="en",
+    )
+
+    assert chapters == expected_chapters
+    resolver.list_chapters.assert_called_once_with(
+        manga_id="027",
+        language="en",
+    )

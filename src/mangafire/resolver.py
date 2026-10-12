@@ -53,6 +53,22 @@ class MangaFireResolver:
 
         raise ValueError(f"Modo de download inválido: {request.mode}")
 
+    def list_volumes(
+        self,
+        manga_id: str,
+        language: str,
+    ) -> list[Volume]:
+        """Lists all volumes available in the requested language."""
+
+        volumes = self.api.get_volumes(manga_id)
+
+        matching_volumes = [volume for volume in volumes if volume.language == language]
+
+        return sorted(
+            matching_volumes,
+            key=lambda volume: volume.number,
+        )
+
     def resolve_volumes(
         self,
         manga_id: str,
@@ -82,6 +98,67 @@ class MangaFireResolver:
             matching_volumes,
             key=lambda volume: volume.number,
         )
+
+    def list_chapters(
+        self,
+        manga_id: str,
+        language: str,
+    ) -> list[Chapter]:
+        """Lists all chapters available in the requested language."""
+
+        chapters = self.api.get_chapters(
+            manga_id,
+            language=language,
+        )
+
+        return self._select_chapter_versions(chapters)
+
+    @staticmethod
+    def _select_chapter_versions(
+        chapters: list[Chapter],
+    ) -> list[Chapter]:
+        """Selects one chapter version per number, preserving type preference."""
+
+        chapters_by_number: dict[float, list[Chapter]] = {}
+
+        for chapter in chapters:
+            chapters_by_number.setdefault(
+                chapter.number,
+                [],
+            ).append(chapter)
+
+        resolved_chapters: list[Chapter] = []
+        preferred_type: str | None = None
+
+        for number in sorted(chapters_by_number):
+            candidates = chapters_by_number[number]
+
+            if len(candidates) == 1:
+                selected = candidates[0]
+            else:
+                selected = next(
+                    (
+                        chapter
+                        for chapter in candidates
+                        if chapter.type == preferred_type
+                    ),
+                    None,
+                )
+
+                if selected is None:
+                    selected = next(
+                        (
+                            chapter
+                            for chapter in candidates
+                            if chapter.type == "official"
+                        ),
+                        candidates[0],
+                    )
+
+            resolved_chapters.append(selected)
+            preferred_type = selected.type
+
+        return resolved_chapters
 
     def resolve_chapters(
         self,
@@ -150,4 +227,4 @@ class MangaFireResolver:
             resolved_chapters.append(selected)
             preferred_type = selected.type
 
-        return resolved_chapters
+        return self._select_chapter_versions(matching_chapters)

@@ -67,6 +67,34 @@ class MangaFireDownloadService:
         self.downloader = downloader or GalleryDLDownloader()
         self.api = api or MangaFireAPI()
 
+    def list_volumes(
+        self,
+        manga_url: str,
+        language: str,
+    ) -> list[Volume]:
+        """Lists all volumes available for a manga in the requested language."""
+
+        manga_id = parse_manga_id(manga_url)
+
+        return self.resolver.list_volumes(
+            manga_id=manga_id,
+            language=language,
+        )
+
+    def list_chapters(
+        self,
+        manga_url: str,
+        language: str,
+    ) -> list[Chapter]:
+        """Lists all chapters available for a manga in the requested language."""
+
+        manga_id = parse_manga_id(manga_url)
+
+        return self.resolver.list_chapters(
+            manga_id=manga_id,
+            language=language,
+        )
+
     def download(
         self,
         request: DownloadRequest,

@@ -3,6 +3,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from mangafire.models import Volume
+
 from mangafire import cli as main
 from mangafire.download_service import NoResourcesFoundError
 from mangafire.downloader import (
@@ -427,3 +429,100 @@ def test_list_cannot_be_combined_with_download_selection(
         parser.parse_args()
 
     assert exc_info.value.code == 2
+
+
+@pytest.mark.parametrize("list_type", ["chapters", "volumes"])
+def test_list_requires_language(monkeypatch, list_type):
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--list",
+            list_type,
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main.main()
+
+    assert exc_info.value.code == 2
+
+
+@pytest.mark.parametrize(
+    "list_type",
+    ["chapters", "volumes"],
+)
+def test_list_with_language_does_not_require_download_selection(
+    monkeypatch,
+    list_type,
+):
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--list",
+            list_type,
+            "--lang",
+            "pt-br",
+        ],
+    )
+
+    parser = main.build_parser()
+    args = parser.parse_args()
+
+    assert args.list == list_type
+    assert args.lang == "pt-br"
+    assert args.chapters is None
+    assert args.volumes is None
+
+
+def test_main_lists_volumes(monkeypatch, capsys):
+    service = Mock()
+    service.list_volumes.return_value = [
+        Volume(
+            id=101,
+            number=1,
+            name="Volume 1",
+            language="pt-br",
+            chapter_count=10,
+        ),
+        Volume(
+            id=102,
+            number=2,
+            name="Volume 2",
+            language="pt-br",
+            chapter_count=9,
+        ),
+    ]
+
+    monkeypatch.setattr(
+        main,
+        "MangaFireDownloadService",
+        lambda: service,
+    )
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--list",
+            "volumes",
+            "--lang",
+            "pt-br",
+        ],
+    )
+
+    result = main.main()
+
+    assert result == 0
+    service.list_volumes.assert_called_once_with(
+        manga_url="https://mangafire.to/title/v92q7",
+        language="pt-br",
+    )
+    service.download.assert_not_called()
+    service.download_direct.assert_not_called()

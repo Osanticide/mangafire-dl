@@ -414,3 +414,36 @@ def test_resolve_request_chapters():
         2,
         636.5,
     ]
+
+
+def test_list_volumes_by_language():
+    resolver = MangaFireResolver(FakeMangaFireAPI())
+
+    volumes = resolver.list_volumes(
+        manga_id="027",
+        language="pt-br",
+    )
+
+    assert [volume.number for volume in volumes] == [1, 2, 3, 4, 5]
+    assert all(volume.language == "pt-br" for volume in volumes)
+
+
+def test_list_chapters_keeps_existing_version_preference():
+    resolver = MangaFireResolver(FakeChapterAPI())
+
+    chapters = resolver.list_chapters(
+        manga_id="027",
+        language="en",
+    )
+
+    assert [chapter.number for chapter in chapters] == [1, 2, 3, 4, 5, 6, 12, 636.5]
+    assert [chapter.type for chapter in chapters] == [
+        "official",
+        "official",
+        "unofficial",
+        "unofficial",
+        "unofficial",
+        "unofficial",
+        "unofficial",
+        "unofficial",
+    ]
