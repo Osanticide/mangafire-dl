@@ -342,3 +342,88 @@ def test_main_accepts_manga_id(monkeypatch):
     assert request.language == "pt-br"
     assert request.mode == "volumes"
     assert request.selections == ((1, 1),)
+
+
+def test_main_accepts_list_chapters_arguments(monkeypatch):
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--list",
+            "chapters",
+            "--lang",
+            "pt-br",
+        ],
+    )
+
+    parser = main.build_parser()
+    args = parser.parse_args()
+
+    assert args.url == "v92q7"
+    assert args.list == "chapters"
+    assert args.lang == "pt-br"
+
+
+def test_main_accepts_list_volumes_arguments(monkeypatch):
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--list",
+            "volumes",
+            "--lang",
+            "pt-br",
+        ],
+    )
+
+    parser = main.build_parser()
+    args = parser.parse_args()
+
+    assert args.url == "v92q7"
+    assert args.list == "volumes"
+    assert args.lang == "pt-br"
+
+
+import pytest
+
+
+@pytest.mark.parametrize(
+    "list_type, download_option, selection",
+    [
+        ("chapters", "--chapters", "1-10"),
+        ("volumes", "--volumes", "1-5"),
+        ("chapters", "--volumes", "1-5"),
+        ("volumes", "--chapters", "1-10"),
+    ],
+)
+def test_list_cannot_be_combined_with_download_selection(
+    monkeypatch,
+    list_type,
+    download_option,
+    selection,
+):
+    monkeypatch.setattr(
+        main.sys,
+        "argv",
+        [
+            "mangafire-dl",
+            "v92q7",
+            "--list",
+            list_type,
+            "--lang",
+            "pt-br",
+            download_option,
+            selection,
+        ],
+    )
+
+    parser = main.build_parser()
+
+    with pytest.raises(SystemExit) as exc_info:
+        parser.parse_args()
+
+    assert exc_info.value.code == 2

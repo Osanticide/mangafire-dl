@@ -80,7 +80,21 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    parser.add_argument(
+        "--list",
+        choices=("chapters", "volumes"),
+        metavar="TYPE",
+        help="List available chapters or volumes without downloading them.",
+    )
+
     mode_group = parser.add_mutually_exclusive_group()
+
+    mode_group.add_argument(
+        "--list",
+        choices=("chapters", "volumes"),
+        metavar="TYPE",
+        help="List available chapters or volumes without downloading them.",
+    )
 
     mode_group.add_argument(
         "--volumes",
